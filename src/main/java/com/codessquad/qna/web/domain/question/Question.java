@@ -1,8 +1,14 @@
 package com.codessquad.qna.web.domain.question;
 
+import com.codessquad.qna.web.domain.answer.Answer;
+import com.codessquad.qna.web.domain.user.User;
+import com.codessquad.qna.web.dto.question.QuestionRequest;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 public class Question {
@@ -12,18 +18,22 @@ public class Question {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable=false)
-    private String writer;
+    @ManyToOne
+    @JoinColumn(foreignKey = @ForeignKey(name = "fk_question_writer"))
+    private User writer;
 
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String title;
 
-    @Column(nullable=false)
+    @Column(nullable = false)
     private String contents;
 
     private LocalDateTime createdAt;
 
-    public Question(String writer, String title, String contents) {
+    @OneToMany(mappedBy = "question", cascade = CascadeType.ALL)
+    private List<Answer> answers = new ArrayList<>();
+
+    public Question(User writer, String title, String contents) {
         this.writer = writer;
         this.title = title;
         this.contents = contents;
@@ -34,11 +44,15 @@ public class Question {
 
     }
 
+    public static Question toEntity(User writer, QuestionRequest request) {
+        return new Question(writer, request.getTitle(), request.getContents());
+    }
+
     public Long getId() {
         return id;
     }
 
-    public String getWriter() {
+    public User getWriter() {
         return writer;
     }
 
@@ -51,7 +65,27 @@ public class Question {
     }
 
     public String getCreatedAt() {
-        return this.createdAt.format(DATE_TIME_FORMATTER);
+        return createdAt.format(DATE_TIME_FORMATTER);
+    }
+
+    public List<Answer> getAnswers() {
+        return answers;
+    }
+
+    public void addAnswer(Answer answer) {
+        answers.add(answer);
+        if (answer.getQuestion() != this) {
+            answer.setQuestion(this);
+        }
+    }
+
+    public void update(String title, String contents) {
+        this.title = title;
+        this.contents = contents;
+    }
+
+    public boolean isMatchingWriter(User user) {
+        return writer.isMatchingWriter(user);
     }
 
     @Override
